@@ -1,0 +1,25 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.env
+*.db
+
+# Node / React
+node_modules/
+dist/
+
+# Android
+build/
+.gradle/
+.idea/
+*.apk
+*.aab
+
+# Logs
+*.log
+logcat*.txt
+recent_log*.txt
+
+# Backup archives
+*.zip
