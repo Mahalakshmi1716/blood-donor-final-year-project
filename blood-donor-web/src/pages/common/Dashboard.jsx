@@ -92,6 +92,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [seenAlertIds, setSeenAlertIds] = useState(new Set());
+  const [activeBrowserAlert, setActiveBrowserAlert] = useState(null);
 
   // Map state
   const [mapCenter, setMapCenter] = useState(null); // Defaults to browser GPS coordinates
@@ -167,14 +169,75 @@ export default function Dashboard() {
     }
   }, [user, navigate]);
 
+  // Fetch alerts helper that updates seenAlertIds and notifications
+  const loadAlerts = () => {
+    patientApi.getAlerts()
+      .then((res) => {
+        const fetchedAlerts = res.alerts || [];
+        setAlerts(fetchedAlerts);
+
+        // Check for new alerts to trigger notification if Donor
+        if (user?.user_type === 'Donor') {
+          fetchedAlerts.forEach((alert) => {
+            if (alert.id) {
+              setSeenAlertIds((prev) => {
+                if (prev.has(alert.id)) return prev;
+                const next = new Set(prev);
+                next.add(alert.id);
+
+                // Show in-app banner/toast
+                setActiveBrowserAlert(alert);
+
+                // Standard browser Notification API
+                if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                  new Notification(`Emergency Blood Request: ${alert.blood_group}`, {
+                    body: `Need blood at ${alert.hospital_name || 'Hospital'}. Urgency: ${alert.urgency}`,
+                    icon: '/favicon.ico'
+                  });
+                }
+                return next;
+              });
+            }
+          });
+        }
+      })
+      .catch(() => {});
+  };
+
+  // Request browser Notification permissions on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
+
+  // Background polling for Alerts (runs every 10 seconds)
+  useEffect(() => {
+    if (!user || user.user_type !== 'Donor') return;
+
+    // Load initially to populate seenAlertIds so we only alert for FUTURE new notifications
+    patientApi.getAlerts()
+      .then((res) => {
+        const initialIds = new Set((res.alerts || []).map(a => a.id).filter(Boolean));
+        setSeenAlertIds(initialIds);
+      })
+      .catch(() => {});
+
+    const interval = setInterval(() => {
+      loadAlerts();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [user]);
+
   // Handle Dynamic Tab Loads
   useEffect(() => {
     if (!user) return;
 
     if (currentTab === 'alerts') {
-      patientApi.getAlerts()
-        .then((res) => setAlerts(res.alerts || []))
-        .catch(() => {});
+      loadAlerts();
     } else if (currentTab === 'chat') {
       chatApi.getConversations()
         .then((res) => setConversations(res.conversations || []))
@@ -393,6 +456,56 @@ export default function Dashboard() {
 
   return (
     <div className="app-layout">
+      {/* Active browser emergency alert banner */}
+      {activeBrowserAlert && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          backgroundColor: '#fee2e2',
+          border: '2px solid #ef4444',
+          borderRadius: '12px',
+          padding: '20px',
+          boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+          zIndex: 9999,
+          maxWidth: '380px',
+          animation: 'slideIn 0.3s ease-out'
+        }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', textAlign: 'left' }}>
+            <div style={{ fontSize: '24px' }}>🚨</div>
+            <div>
+              <h4 style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: 700, color: '#991b1b' }}>
+                Emergency Blood Request!
+              </h4>
+              <p style={{ margin: '0 0 12px', fontSize: '14px', color: '#7f1d1d' }}>
+                <strong>{activeBrowserAlert.blood_group}</strong> blood required at <strong>{activeBrowserAlert.hospital_name}</strong>.
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ padding: '6px 12px', fontSize: '13px' }}
+                  onClick={() => {
+                    setTab('alerts');
+                    setActiveBrowserAlert(null);
+                  }}
+                >
+                  View Request
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ padding: '6px 12px', fontSize: '13px', borderColor: '#fca5a5', color: '#b91c1c' }}
+                  onClick={() => setActiveBrowserAlert(null)}
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar for Desktop */}
       <aside className="app-sidebar">
         <div className="sidebar-header">
