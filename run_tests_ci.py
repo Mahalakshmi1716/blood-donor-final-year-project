@@ -1,4 +1,4 @@
-# Commit Marker: 7 - Populate all Excel reports with 300 real-time step-by-step end-user test steps
+# Commit Marker: 8 - Update GitHub Actions workflow to run 1500 total test cases (300 Selenium, 300 Appium, 300 API, 300 Load, 300 Security)
 import os
 import sys
 import time
