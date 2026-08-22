@@ -1,4 +1,4 @@
-# Commit Marker: 1 - Fix GitHub Action dependencies installation to install full requirements.txt
+# Commit Marker: 2 - Fix CI pipeline exit code, update security suite assertions, and upgrade reporting templates
 import os
 import sys
 import time
