@@ -1,4 +1,4 @@
-# Commit Marker: 5 - Expand Load testing and Vulnerability security testing suites to 300 cases each
+# Commit Marker: 6 - Populate all Excel reports with 300 unique test cases per suite (1500 total)
 import os
 import sys
 import time
