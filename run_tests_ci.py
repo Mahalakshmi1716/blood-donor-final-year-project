@@ -1,4 +1,4 @@
-# Commit Marker: 6 - Populate all Excel reports with 300 unique test cases per suite (1500 total)
+# Commit Marker: 7 - Populate all Excel reports with 300 real-time step-by-step end-user test steps
 import os
 import sys
 import time
