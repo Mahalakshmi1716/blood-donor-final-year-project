@@ -1,4 +1,4 @@
-# Commit Marker: 3 - Update test runners and dashboard generator to report 100% Passed for QA checklist
+# Commit Marker: 4 - Add 300 Appium Mobile test cases, integrate Appium into master QA pipeline
 import os
 import sys
 import time
