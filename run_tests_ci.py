@@ -1,4 +1,4 @@
-# Commit Marker: 4 - Add 300 Appium Mobile test cases, integrate Appium into master QA pipeline
+# Commit Marker: 5 - Expand Load testing and Vulnerability security testing suites to 300 cases each
 import os
 import sys
 import time
