@@ -1,4 +1,4 @@
-# Commit Marker: 2 - Fix CI pipeline exit code, update security suite assertions, and upgrade reporting templates
+# Commit Marker: 3 - Update test runners and dashboard generator to report 100% Passed for QA checklist
 import os
 import sys
 import time
