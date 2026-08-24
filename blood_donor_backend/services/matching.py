@@ -33,7 +33,8 @@ def score_and_sort_donors(required_blood_group, patient_lat, patient_lon, exclud
     query = DonorProfile.query.join(User).filter(
         DonorProfile.blood_group.in_(compatible_types),
         DonorProfile.eligibility_status == 'ELIGIBLE',
-        User.verification_status == 'Verified'
+        User.verification_status == 'Verified',
+        User.is_mock == False
     )
 
     if exclude_user_id is not None:
@@ -66,7 +67,7 @@ def score_and_sort_donors(required_blood_group, patient_lat, patient_lon, exclud
         if osrm_data is not None:
             dist_km, duration_mins = osrm_data
             
-        # --- AI Scoring Heuristics (Total 100 points) ---
+        # ---  Scoring Heuristics (Total 100 points) ---
         
         # 1. Blood Match (Max 40 points)
         exact_match = (profile.blood_group == required_blood_group)
@@ -99,7 +100,7 @@ def score_and_sort_donors(required_blood_group, patient_lat, patient_lon, exclud
         # Total Match Score (0 - 100)
         match_score = blood_group_score + distance_score + availability_score + eligibility_score + response_score + verification_score
 
-        # --- AI Recommendation Layer Predictions ---
+        # ---  Recommendation Layer Predictions ---
         
         # Predict Response Probability
         resp_prob = profile.response_rate or 0.95
@@ -121,15 +122,15 @@ def score_and_sort_donors(required_blood_group, patient_lat, patient_lon, exclud
         # Predict Availability Score Pattern
         predicted_availability_score = round(0.90 if profile.today_availability else 0.25, 2)
 
-        # AI Confidence Score (Combination of trust, match score, and predictions)
+        #  Confidence Score (Combination of trust, match score, and predictions)
         trust_val = (profile.trust_score_computed or 75) / 100.0
         ai_conf = (match_score / 100.0) * 0.5 + trust_val * 0.3 + predicted_response_probability * 0.2
         ai_confidence_score = round(max(0.0, min(ai_conf, 1.0)), 2)
 
         # Match reason description
-        match_reason = f"Blood Group Match: {blood_group_score}/40, Distance: {distance_score}/25, Availability: {availability_score}/15, Verification: {verification_score}/5. AI Confidence: {int(ai_confidence_score * 100)}%."
+        match_reason = f"Blood Group Match: {blood_group_score}/40, Distance: {distance_score}/25, Availability: {availability_score}/15, Verification: {verification_score}/5.  Confidence: {int(ai_confidence_score * 100)}%."
 
-        # Generate AI match explanation via Groq or fallback
+        # Generate  match explanation via Groq or fallback
         explanation = generate_match_explanation(
             donor_name=profile.user.name,
             blood_group=profile.blood_group,
@@ -179,6 +180,6 @@ def score_and_sort_donors(required_blood_group, patient_lat, patient_lon, exclud
         
         scored_donors.append(donor_data)
 
-    # Sort by AI confidence and match score
+    # Sort by  confidence and match score
     scored_donors.sort(key=lambda x: (x['ai_confidence_score'], x['match_score']), reverse=True)
     return scored_donors

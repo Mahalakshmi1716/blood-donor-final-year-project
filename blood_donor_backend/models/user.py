@@ -31,6 +31,7 @@ class User(db.Model):
     
     # Preferences
     preferred_language = db.Column(db.String(10), default='en') # en, ta, hi
+    is_mock = db.Column(db.Boolean, default=False, nullable=False)
     
     # Relationships
     donor_profile = db.relationship('DonorProfile', backref='user', uselist=False, cascade="all, delete-orphan")

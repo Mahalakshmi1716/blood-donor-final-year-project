@@ -46,7 +46,8 @@ def seed_db():
                 verified_email=True,
                 verified_mobile=True,
                 verification_status='Verified',
-                hospital_verification_status='Verified'
+                hospital_verification_status='Verified',
+                is_mock=True
             )
             user.set_password('password123')
             db.session.add(user)

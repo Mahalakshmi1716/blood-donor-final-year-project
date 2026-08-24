@@ -191,6 +191,30 @@ class DashboardViewModel : ViewModel() {
         }
     }
 
+    fun acceptAlert(alertId: Int, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.acceptAlert(alertId)
+                if (response.isSuccessful) {
+                    fetchAlerts()
+                    onComplete()
+                }
+            } catch (e: Exception) {}
+        }
+    }
+
+    fun declineAlert(alertId: Int, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.declineAlert(alertId)
+                if (response.isSuccessful) {
+                    fetchAlerts()
+                    onComplete()
+                }
+            } catch (e: Exception) {}
+        }
+    }
+
     fun fetchNearbyDonors(bloodGroup: String, lat: Double, lon: Double, urgency: String = "High") {
         viewModelScope.launch {
             try {

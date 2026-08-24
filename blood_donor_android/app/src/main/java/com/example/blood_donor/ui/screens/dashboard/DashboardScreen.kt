@@ -49,6 +49,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -210,7 +211,12 @@ fun DashboardScreen(
                 )
                 DashboardTab.MAP -> MapTab(profile = profile, nearbyDonors = nearbyDonors, lang = preferredLanguage)
                 DashboardTab.CHAT -> ChatTab(lang = preferredLanguage, onNavigateToChat = onNavigateToChat)
-                DashboardTab.ALERTS -> AlertsTab(alerts = alerts, lang = preferredLanguage)
+                DashboardTab.ALERTS -> AlertsTab(
+                    alerts = alerts,
+                    lang = preferredLanguage,
+                    onAccept = { id -> viewModel.acceptAlert(id) },
+                    onDecline = { id -> viewModel.declineAlert(id) }
+                )
                 DashboardTab.PROFILE -> ProfileTab(
                     profile = profile, 
                     user = user,
@@ -647,7 +653,7 @@ fun TipOfTheDayCard(tip: String, onRefresh: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("💡", fontSize = 20.sp)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("AI Tip of the Day", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextDark)
+                    Text(" Tip of the Day", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextDark)
                 }
                 IconButton(onClick = onRefresh) {
                     Icon(
@@ -840,7 +846,12 @@ fun ChatTab(lang: String, chatViewModel: com.example.blood_donor.ui.viewmodels.C
 }
 
 @Composable
-fun AlertsTab(alerts: List<com.example.blood_donor.data.AlertDto>, lang: String) {
+fun AlertsTab(
+    alerts: List<com.example.blood_donor.data.AlertDto>,
+    lang: String,
+    onAccept: (Int) -> Unit,
+    onDecline: (Int) -> Unit
+) {
     fun t(key: String): String {
         return LocalizedStrings.get(key, lang)
     }
@@ -864,7 +875,7 @@ fun AlertsTab(alerts: List<com.example.blood_donor.data.AlertDto>, lang: String)
         } else {
             LazyColumn {
                 items(alerts) { alert ->
-                    AlertCard(alert, lang = lang)
+                    AlertCard(alert, lang = lang, onAccept = onAccept, onDecline = onDecline)
                     Spacer(modifier = Modifier.height(12.dp))
                 }
             }
@@ -873,33 +884,73 @@ fun AlertsTab(alerts: List<com.example.blood_donor.data.AlertDto>, lang: String)
 }
 
 @Composable
-fun AlertCard(alert: com.example.blood_donor.data.AlertDto, lang: String) {
+fun AlertCard(
+    alert: com.example.blood_donor.data.AlertDto,
+    lang: String,
+    onAccept: (Int) -> Unit,
+    onDecline: (Int) -> Unit
+) {
     fun t(key: String): String {
         return LocalizedStrings.get(key, lang)
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().clickable {},
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier.size(40.dp).background(BloodRed.copy(alpha = 0.1f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Warning, contentDescription = null, tint = BloodRed)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier.size(40.dp).background(BloodRed.copy(alpha = 0.1f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = BloodRed)
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    val alertType = if (alert.urgency.isNotEmpty()) alert.urgency.uppercase() else "URGENT"
+                    val desc = String.format(t("alert_needed_template"), alertType, alert.unitsRequired, alert.bloodGroup, alert.hospitalName)
+                    Text(desc, fontWeight = FontWeight.Medium, color = TextDark, fontSize = 14.sp)
+                    Text(alert.timestamp.take(16).replace("T", " "), color = TextGray, fontSize = 12.sp)
+                }
+                // Unread dot
+                if (alert.status == "ALERT_SENT" || alert.status == "CREATED") {
+                    Box(modifier = Modifier.size(8.dp).background(PrimaryRed, CircleShape))
+                }
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                val alertType = if (alert.urgency.isNotEmpty()) alert.urgency.uppercase() else "URGENT"
-                val desc = String.format(t("alert_needed_template"), alertType, alert.unitsRequired, alert.bloodGroup, alert.hospitalName)
-                Text(desc, fontWeight = FontWeight.Medium, color = TextDark, fontSize = 14.sp)
-                Text(alert.timestamp.take(16).replace("T", " "), color = TextGray, fontSize = 12.sp)
+            
+            // Show Accept/Decline buttons if status is pending
+            if (alert.status == "ALERT_SENT" || alert.status == "CREATED") {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    OutlinedButton(
+                        onClick = { onDecline(alert.id) },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(t("decline"))
+                    }
+                    Button(
+                        onClick = { onAccept(alert.id) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)) // Green accept
+                    ) {
+                        Text(t("accept"))
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Status: " + alert.status,
+                    color = if (alert.status == "DONOR_ACCEPTED") Color(0xFF2E7D32) else TextGray,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
-            // Unread dot
-            Box(modifier = Modifier.size(8.dp).background(PrimaryRed, CircleShape))
         }
     }
 }
